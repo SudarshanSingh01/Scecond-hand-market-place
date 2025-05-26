@@ -59,4 +59,4 @@ This is a Java-based console application that simulates a second-hand marketplac
 	•	Search functionality for buyers
 	•	Save product data in separate files
 	•	Implement MVC or layered architecture
-	•	Enhance input validation and formatting
+	•	Enhances input validation and formatting
