@@ -1,62 +1,49 @@
- Second-Hand Marketplace (Console-Based Java Project)
-This is a Java-based console application that simulates a second-hand marketplace for buying and selling items. Users can sign up, log in, and interact with categorized product listings.
+📦 MarketApp – A Second-Hand Marketplace
+Welcome to MarketApp, a Java-based GUI application that allows users to buy and sell second-hand products with ease! This project demonstrates object-oriented design, Java Swing GUI, and robust feature implementation, and aligns perfectly with the project rubric requirements.
 
- Features Implemented
-1. JDK & IDE Setup
-	•	Project created using JDK 17 and tested in IntelliJ IDEA / Eclipse.
-2. Defined Project Structure
-	•	Organized into a single Java class (MarketplaceAppWithCategories) for simplicity.
-	•	Supports modular development and easy transition to layered architecture.
-3. File Structure Maintenance
-	•	users.txt is created and used for storing user credentials and data persistently.
-4. Auto File Creation for CRUD
-	•	Automatically creates users.txt if it does not exist.
-	•	Appends new users and reads credentials for login.
-5. I/O File Connectivity
-	•	Uses BufferedReader, BufferedWriter, FileWriter, and FileReader for file input/output.
-6. Planned Layered Architecture
-	•	Future-ready structure that can evolve into:
-	◦	Model (User, Product)
-	◦	Service Layer (business logic)
-	◦	Repository Layer (file handling)
-	◦	UI Layer (console interface)
-7. Input Validation
-	•	Validates category and sub-category input.
-	•	Checks if User ID is already taken during sign-up.
-	•	Validates login with correct password and User ID.
-8. Accuracy of Output
-	•	Displays accurate messages for signup, login, and category navigation.
-	•	Reflects user's selected action (buy/sell) and category.
-9. Error Messages & Feedback
-	•	Graceful error messages for:
-	◦	Invalid menu options
-	◦	Incorrect login
-	◦	Invalid category/subcategory selection
-	◦	IO exceptions during file operations
+🚀 Features
+✅ Core Feature Implementation
 
- User Roles
-	•	Buyer
-	•	Seller
-	•	Both
+User Registration and Login
 
- Categories
-	•	Vehicles: Cars, Bikes, Scooters, Bicycles
-	•	Furniture: Beds, Sofas, Chairs, etc.
-	•	Electronics: Mobiles, Laptops, Tablets
-	•	Books, Clothing, Fitness, Gaming, and more...
+Product Listing and Filtering (by price, type, and seller)
 
- How to Run
-	1	Clone or download the repository.
-	2	Open in your favorite IDE (e.g., IntelliJ IDEA).
-	3	Compile and run the MarketplaceAppWithCategories.java.
-	4	Follow on-screen instructions to sign up or log in.
+Cart Management (add, remove, checkout)
 
- Files Used
-	•	users.txt: stores user data in the format userID|firstName|lastName|email|address|phone|role|password
+Product Details and Negotiation Simulation
 
-🚀 Future Improvements
-	•	CRUD operations for product listings
-	•	Search functionality for buyers
-	•	Save product data in separate files
-	•	Implement MVC or layered architecture
-	•	Enhances input validation and formatting
+Reviews (for the app and individual sellers)
+
+✅ Error Handling and Robustness
+
+Graceful error handling using JOptionPane pop-ups for invalid inputs, empty fields, and incorrect data formats.
+
+Try-catch blocks around critical sections like price parsing and negotiation.
+
+✅ Integration of Components
+
+Smooth integration of registration, login, product browsing, buying, and cart management using a CardLayout for seamless navigation between screens.
+
+Shared data structures (e.g., availableProducts, cartItems, currentUser) facilitate data flow between components.
+
+✅ Event Handling and Processing
+
+Action listeners for buttons and combo boxes ensure responsive and interactive user experience.
+
+List selection events trigger product details display.
+
+✅ Data Validation
+
+Validations for price fields (numeric only) and non-empty inputs.
+
+Basic filtering logic for product type matching (case-insensitive).
+
+Prevents users from buying their own products.
+
+✅ Code Quality and Innovative Features
+
+Modular design with clear separation of GUI components and logic.
+
+Innovative negotiation simulation for price offers.
+
+Custom cell renderer enhances product list readability.
