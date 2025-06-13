@@ -1,969 +1,305 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID; // For generating unique IDs for products
+import java.util.ArrayList; // Explicitly import ArrayList
+import java.util.List;     // Explicitly import List
+import java.util.UUID;
 
-public class Marketappwithgui extends JFrame {
+public class MarketplaceApp extends JFrame {
 
-    // --- Data Models (In-memory for demonstration) ---
-    // Represents a user in the system
+    // Data Models (In-memory)
     private static class User {
-        String username;
-        String password;
-        String address; // User's address
-        String phoneNumber; // New: User's phone number
-        String email;       // New: User's email
-
-        public User(String username, String password, String address, String phoneNumber, String email) {
-            this.username = username;
-            this.password = password;
-            this.address = address;
-            this.phoneNumber = phoneNumber;
-            this.email = email;
+        String username, password, address, phoneNumber, email;
+        public User(String u, String p, String a, String ph, String e) {
+            username = u; password = p; address = a; phoneNumber = ph; email = e;
         }
-
         public String getUsername() { return username; }
         public String getPassword() { return password; }
-        public String getAddress() { return address; }
-        public String getPhoneNumber() { return phoneNumber; }
-        public String getEmail() { return email; }
+        public String getAddress() { return address; } // Used for delivery address
     }
 
-    // Represents a product listed for sale
     private static class Product {
-        String id;
-        String name;
-        String description;
+        String id, name, description, sellerUsername, type;
         double price;
-        String sellerUsername;
-        String imagePath; // Path to the image file, simulated
-        String type; // New: Type of the product (e.g., "Electronics", "Books")
 
-        public Product(String id, String name, String description, double price, String sellerUsername, String imagePath, String type) {
-            this.id = id;
-            this.name = name;
-            this.description = description;
-            this.price = price;
-            this.sellerUsername = sellerUsername;
-            this.imagePath = imagePath;
-            this.type = type;
+        public Product(String id, String n, String d, double p, String s, String t) {
+            this.id = id; name = n; description = d; price = p; sellerUsername = s; type = t;
         }
-
-        public String getId() { return id; }
         public String getName() { return name; }
-        public String getDescription() { return description; }
         public double getPrice() { return price; }
         public String getSellerUsername() { return sellerUsername; }
-        public String getImagePath() { return imagePath; }
-        public String getType() { return type; } // Getter for the new type field
-
+        public String getType() { return type; }
         @Override
-        public String toString() {
-            return name + " - Rs." + String.format("%.2f", price);
-        }
+        public String toString() { return name + " - Rs." + String.format("%.2f", price); }
     }
 
-    // --- Application State Variables ---
-    private List<User> registeredUsers = new ArrayList<>();
-    private List<Product> availableProducts = new ArrayList<>();
-    private List<Product> cartItems = new ArrayList<>();
-    private User currentUser = null; // Currently logged-in user
+    // App State
+    private final List<User> registeredUsers = new ArrayList<>();
+    private final List<Product> availableProducts = new ArrayList<>();
+    private final List<Product> cartItems = new ArrayList<>();
+    private User currentUser = null;
 
-    // --- GUI Components ---
-    private JPanel mainPanel; // Panel using CardLayout for switching views
+    // GUI Components (references for dynamic updates)
     private CardLayout cardLayout;
-
-    // Login Panel Components
-    private JPanel loginPanel;
-    private JTextField loginUsernameField;
-    private JPasswordField loginPasswordField;
-
-    // Signup Panel Components
-    private JPanel signupPanel;
-    private JTextField signupUsernameField;
-    private JPasswordField signupPasswordField;
-    private JTextField signupAddressField; // New field for address
-    private JTextField signupPhoneNumberField; // New: Phone number field
-    private JTextField signupEmailField;       // New: Email field
-
-    // Dashboard Panel Components
-    private JPanel dashboardPanel;
-
-    // Sell Product Panel Components
-    private JPanel sellProductPanel;
-    private JTextField productNameField;
+    private JPanel mainPanel;
+    private JTextField loginUsernameField, signupUsernameField, signupAddressField, signupPhoneNumberField, signupEmailField, productNameField, productPriceField, priceFilterMinField, priceFilterMaxField;
+    private JPasswordField loginPasswordField, signupPasswordField;
     private JTextArea productDescriptionArea;
-    private JTextField productPriceField;
-    private JLabel productImageLabel; // To display selected image path or "No image selected"
-    private String selectedImagePath = ""; // Stores the path of the selected image
-    // Note: A real app would also need a way to input product type on selling.
-    // For this demo, products created via 'Sell' will have a default type 'Miscellaneous'.
+    private JLabel welcomeLabelDashboard, cartTotalPriceLabel;
+    private DefaultListModel<Product> productListModel, cartListModel;
+    private JComboBox<String> productTypeFilterComboBox;
 
-    // Buy Product Panel Components
-    private JPanel buyProductPanel;
-    private JList<Product> productJList; // List to display products
-    private DefaultListModel<Product> productListModel; // Model for JList
-    private JTextField priceFilterMinField;
-    private JTextField priceFilterMaxField;
-    private JComboBox<String> productTypeFilterComboBox; // Simple product type filter
-
-    // Cart Panel Components
-    private JPanel cartPanel;
-    private JList<Product> cartJList;
-    private DefaultListModel<Product> cartListModel;
-    private JLabel cartTotalPriceLabel;
-
-    // --- Constructor ---
-    public Marketappwithgui() {
+    public MarketplaceApp() {
         setTitle("Second Hand Marketplace");
-        setSize(800, 600); // Increased size for better layout
+        setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Center the window
+        setLocationRelativeTo(null);
 
-        // Initialize dummy data (for demonstration)
         initializeDummyData();
+        initUI();
+        setVisible(true);
+    }
 
-        // Setup main panel with CardLayout
+    private void initializeDummyData() {
+        registeredUsers.add(new User("user1", "pass1", "123 Main St", "9876543210", "user1@gmail.com"));
+        registeredUsers.add(new User("sellerA", "sellpass", "456 Oak Ave", "1234567890", "sellerA@gmail.com"));
+        availableProducts.add(new Product(UUID.randomUUID().toString(), "Vintage Camera", "Classic", 2500.00, "sellerA", "Electronics"));
+        availableProducts.add(new Product(UUID.randomUUID().toString(), "Old Bicycle", "Needs tires", 1500.00, "user1", "Vehicles"));
+        availableProducts.add(new Product(UUID.randomUUID().toString(), "Rare Book", "First edition", 5000.00, "sellerA", "Books"));
+    }
+
+    private void initUI() {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
         add(mainPanel);
 
-        // Initialize all individual panels
-        createLoginPanel();
-        createSignupPanel();
-        createDashboardPanel();
-        createSellProductPanel();
-        createBuyProductPanel();
-        createCartPanel();
-
-        // Add panels to the main panel with unique names for CardLayout
+        // Login Panel
+        JPanel loginPanel = new JPanel(new GridLayout(5, 2, 10, 10));
+        loginPanel.setBorder(new EmptyBorder(50, 50, 50, 50));
+        loginPanel.add(new JLabel("Username:")); loginPanel.add(loginUsernameField = new JTextField(20));
+        loginPanel.add(new JLabel("Password:")); loginPanel.add(loginPasswordField = new JPasswordField(20));
+        JButton loginButton = new JButton("Login"); loginButton.addActionListener(e -> attemptLogin()); loginPanel.add(loginButton);
+        JButton signupPromptButton = new JButton("Sign Up"); signupPromptButton.addActionListener(e -> cardLayout.show(mainPanel, "Signup")); loginPanel.add(signupPromptButton);
         mainPanel.add(loginPanel, "Login");
-        mainPanel.add(signupPanel, "Signup");
-        mainPanel.add(dashboardPanel, "Dashboard");
-        mainPanel.add(sellProductPanel, "SellProduct");
-        mainPanel.add(buyProductPanel, "BuyProduct");
-        mainPanel.add(cartPanel, "Cart");
 
-        // Show the login panel initially
-        cardLayout.show(mainPanel, "Login");
-        setVisible(true);
-    }
-
-    // --- Dummy Data Initialization ---
-    private void initializeDummyData() {
-        // Updated dummy users with phone and email
-        registeredUsers.add(new User("user1", "pass1", "123 Main St", "9876543210", "user1@gmail.com"));
-        registeredUsers.add(new User("sellerA", "sellpass", "456 Oak Ave", "1234567890", "sellerA@gmail.com"));
-
-        // Updated dummy products with explicit types
-        availableProducts.add(new Product(UUID.randomUUID().toString(), "Vintage Camera", "A classic film camera, fully functional.", 2500.00, "sellerA", "", "Electronics"));
-        availableProducts.add(new Product(UUID.randomUUID().toString(), "Old Bicycle", "Needs new tires, but frame is good.", 1500.00, "user1", "", "Vehicles"));
-        availableProducts.add(new Product(UUID.randomUUID().toString(), "Rare Book", "First edition of a popular novel.", 5000.00, "sellerA", "", "Books"));
-        availableProducts.add(new Product(UUID.randomUUID().toString(), "Laptop (Used)", "8GB RAM, 256GB SSD, still good for daily use.", 18000.00, "user1", "", "Electronics"));
-        availableProducts.add(new Product(UUID.randomUUID().toString(), "Antique Vase", "Beautiful decorative piece.", 3000.00, "sellerA", "", "Furniture"));
-    }
-
-    // --- Panel Creation Methods ---
-
-    private void createLoginPanel() {
-        loginPanel = new JPanel(new GridBagLayout());
-        loginPanel.setBorder(new EmptyBorder(50, 50, 50, 50)); // Padding
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        JLabel titleLabel = new JLabel("Welcome to the Marketplace!", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        loginPanel.add(titleLabel, gbc);
-
-        gbc.gridwidth = 1; // Reset gridwidth
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        loginPanel.add(new JLabel("Username:"), gbc);
-        gbc.gridx = 1;
-        loginUsernameField = new JTextField(20);
-        loginPanel.add(loginUsernameField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        loginPanel.add(new JLabel("Password:"), gbc);
-        gbc.gridx = 1;
-        loginPasswordField = new JPasswordField(20);
-        loginPanel.add(loginPasswordField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        JButton loginButton = new JButton("Login");
-        loginButton.setPreferredSize(new Dimension(100, 30));
-        loginPanel.add(loginButton, gbc);
-
-        gbc.gridy = 4;
-        JButton signupPromptButton = new JButton("Don't have an account? Sign Up");
-        signupPromptButton.setPreferredSize(new Dimension(200, 30));
-        loginPanel.add(signupPromptButton, gbc);
-
-        // Action Listeners
-        loginButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                attemptLogin();
-            }
-        });
-
-        signupPromptButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(mainPanel, "Signup");
-            }
-        });
-    }
-
-    private void createSignupPanel() {
-        signupPanel = new JPanel(new GridBagLayout());
+        // Signup Panel
+        JPanel signupPanel = new JPanel(new GridLayout(8, 2, 10, 10));
         signupPanel.setBorder(new EmptyBorder(50, 50, 50, 50));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        signupPanel.add(new JLabel("Username:")); signupPanel.add(signupUsernameField = new JTextField(20));
+        signupPanel.add(new JLabel("Password:")); signupPanel.add(signupPasswordField = new JPasswordField(20));
+        signupPanel.add(new JLabel("Address:")); signupPanel.add(signupAddressField = new JTextField(20));
+        signupPanel.add(new JLabel("Phone (10 digits):")); signupPanel.add(signupPhoneNumberField = new JTextField(20));
+        signupPanel.add(new JLabel("Email (@gmail.com):")); signupPanel.add(signupEmailField = new JTextField(20));
+        JButton signupButton = new JButton("Sign Up"); signupButton.addActionListener(e -> attemptSignup()); signupPanel.add(signupButton);
+        JButton backToLoginButton = new JButton("Back to Login"); backToLoginButton.addActionListener(e -> cardLayout.show(mainPanel, "Login")); signupPanel.add(backToLoginButton);
+        mainPanel.add(signupPanel, "Signup");
 
-        JLabel titleLabel = new JLabel("Create New Account", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        signupPanel.add(titleLabel, gbc);
-
-        gbc.gridwidth = 1;
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        signupPanel.add(new JLabel("Username:"), gbc);
-        gbc.gridx = 1;
-        signupUsernameField = new JTextField(20);
-        signupPanel.add(signupUsernameField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        signupPanel.add(new JLabel("Password:"), gbc);
-        gbc.gridx = 1;
-        signupPasswordField = new JPasswordField(20);
-        signupPanel.add(signupPasswordField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        signupPanel.add(new JLabel("Address:"), gbc);
-        gbc.gridx = 1;
-        signupAddressField = new JTextField(20);
-        signupPanel.add(signupAddressField, gbc);
-
-        // New fields for Phone Number and Email
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        signupPanel.add(new JLabel("Phone Number:"), gbc);
-        gbc.gridx = 1;
-        signupPhoneNumberField = new JTextField(20);
-        signupPanel.add(signupPhoneNumberField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        signupPanel.add(new JLabel("Email:"), gbc);
-        gbc.gridx = 1;
-        signupEmailField = new JTextField(20);
-        signupPanel.add(signupEmailField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 6; // Adjusted gridy for new fields
-        gbc.gridwidth = 2;
-        JButton signupButton = new JButton("Sign Up");
-        signupButton.setPreferredSize(new Dimension(100, 30));
-        signupPanel.add(signupButton, gbc);
-
-        gbc.gridy = 7; // Adjusted gridy for new fields
-        JButton backToLoginButton = new JButton("Back to Login");
-        backToLoginButton.setPreferredSize(new Dimension(100, 30));
-        signupPanel.add(backToLoginButton, gbc);
-
-        // Action Listeners
-        signupButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                attemptSignup();
-            }
-        });
-
-        backToLoginButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(mainPanel, "Login");
-            }
-        });
-    }
-
-    private void createDashboardPanel() {
-        dashboardPanel = new JPanel(new GridBagLayout());
+        // Dashboard Panel
+        JPanel dashboardPanel = new JPanel(new BorderLayout(20, 20));
         dashboardPanel.setBorder(new EmptyBorder(50, 50, 50, 50));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(20, 20, 20, 20);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        welcomeLabelDashboard = new JLabel("Hello, Guest!", SwingConstants.CENTER); welcomeLabelDashboard.setFont(new Font("Arial", Font.BOLD, 28));
+        dashboardPanel.add(welcomeLabelDashboard, BorderLayout.NORTH);
+        JPanel dashButtons = new JPanel(new GridLayout(1, 2, 20, 20));
+        JButton buyButton = new JButton("Buy Products"); buyButton.addActionListener(e -> { refreshBuyProductList(); cardLayout.show(mainPanel, "BuyProduct"); }); dashButtons.add(buyButton);
+        JButton sellButton = new JButton("Sell Products"); sellButton.addActionListener(e -> { clearSellProductForm(); cardLayout.show(mainPanel, "SellProduct"); }); dashButtons.add(sellButton);
+        dashboardPanel.add(dashButtons, BorderLayout.CENTER);
+        JButton logoutButton = new JButton("Logout"); logoutButton.addActionListener(e -> { currentUser = null; cartItems.clear(); JOptionPane.showMessageDialog(this, "Logged out!"); cardLayout.show(mainPanel, "Login"); });
+        dashboardPanel.add(logoutButton, BorderLayout.SOUTH);
+        mainPanel.add(dashboardPanel, "Dashboard");
 
-        JLabel welcomeLabel = new JLabel("Hello, " + (currentUser != null ? currentUser.getUsername() : "Guest") + "!", SwingConstants.CENTER);
-        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        dashboardPanel.add(welcomeLabel, gbc);
-
-        gbc.gridwidth = 1; // Reset
-
-        JButton buyButton = new JButton("Buy Products");
-        buyButton.setPreferredSize(new Dimension(200, 80));
-        buyButton.setFont(new Font("Arial", Font.PLAIN, 20));
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        dashboardPanel.add(buyButton, gbc);
-
-        JButton sellButton = new JButton("Sell Products");
-        sellButton.setPreferredSize(new Dimension(200, 80));
-        sellButton.setFont(new Font("Arial", Font.PLAIN, 20));
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        dashboardPanel.add(sellButton, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 2;
-        JButton logoutButton = new JButton("Logout");
-        logoutButton.setPreferredSize(new Dimension(100, 40));
-        dashboardPanel.add(logoutButton, gbc);
-
-        // Action Listeners
-        buyButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                refreshBuyProductList(); // Refresh list before showing
-                cardLayout.show(mainPanel, "BuyProduct");
-            }
-        });
-
-        sellButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                clearSellProductForm(); // Clear form before showing
-                cardLayout.show(mainPanel, "SellProduct");
-            }
-        });
-
-        logoutButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                currentUser = null;
-                cartItems.clear(); // Clear cart on logout
-                JOptionPane.showMessageDialog(mainPanel, "Logged out successfully!");
-                cardLayout.show(mainPanel, "Login");
-            }
-        });
-    }
-
-    private void createSellProductPanel() {
-        sellProductPanel = new JPanel(new GridBagLayout());
+        // Sell Product Panel
+        JPanel sellProductPanel = new JPanel(new GridLayout(5, 2, 10, 10)); // Reduced rows
         sellProductPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        sellProductPanel.add(new JLabel("Product Name:")); sellProductPanel.add(productNameField = new JTextField(25));
+        sellProductPanel.add(new JLabel("Description:")); productDescriptionArea = new JTextArea(3, 25); sellProductPanel.add(new JScrollPane(productDescriptionArea));
+        sellProductPanel.add(new JLabel("Price (Rs.):")); sellProductPanel.add(productPriceField = new JTextField(10));
+        JButton listProductButton = new JButton("List Product"); listProductButton.addActionListener(e -> listProduct()); sellProductPanel.add(listProductButton);
+        JButton backToDashSell = new JButton("Back to Dashboard"); backToDashSell.addActionListener(e -> { cardLayout.show(mainPanel, "Dashboard"); promptForAppReview(); }); sellProductPanel.add(backToDashSell);
+        mainPanel.add(sellProductPanel, "SellProduct");
 
-        JLabel titleLabel = new JLabel("List a Product for Sale", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        sellProductPanel.add(titleLabel, gbc);
-
-        gbc.gridwidth = 1;
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        sellProductPanel.add(new JLabel("Product Name:"), gbc);
-        gbc.gridx = 1;
-        productNameField = new JTextField(25);
-        sellProductPanel.add(productNameField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        sellProductPanel.add(new JLabel("Description:"), gbc);
-        gbc.gridx = 1;
-        productDescriptionArea = new JTextArea(5, 25);
-        productDescriptionArea.setLineWrap(true);
-        productDescriptionArea.setWrapStyleWord(true);
-        JScrollPane descriptionScrollPane = new JScrollPane(productDescriptionArea);
-        sellProductPanel.add(descriptionScrollPane, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        sellProductPanel.add(new JLabel("Price (Rs.):"), gbc);
-        gbc.gridx = 1;
-        productPriceField = new JTextField(10);
-        sellProductPanel.add(productPriceField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        sellProductPanel.add(new JLabel("Product Photo:"), gbc);
-        gbc.gridx = 1;
-        JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        productImageLabel = new JLabel("No image selected");
-        JButton selectImageButton = new JButton("Select Image");
-        imagePanel.add(productImageLabel);
-        imagePanel.add(selectImageButton);
-        sellProductPanel.add(imagePanel, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 2;
-        JButton listProductButton = new JButton("List Product");
-        listProductButton.setPreferredSize(new Dimension(150, 40));
-        sellProductPanel.add(listProductButton, gbc);
-
-        gbc.gridy = 6;
-        JButton backToDashboardFromSell = new JButton("Back to Dashboard");
-        backToDashboardFromSell.setPreferredSize(new Dimension(150, 40));
-        sellProductPanel.add(backToDashboardFromSell, gbc);
-
-        // Action Listeners
-        selectImageButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setDialogTitle("Select Product Image");
-                fileChooser.setFileFilter(new FileNameExtensionFilter("Image Files", "jpg", "jpeg", "png", "gif"));
-                int userSelection = fileChooser.showOpenDialog(sellProductPanel);
-                if (userSelection == JFileChooser.APPROVE_OPTION) {
-                    File fileToLoad = fileChooser.getSelectedFile();
-                    selectedImagePath = fileToLoad.getAbsolutePath();
-                    productImageLabel.setText(fileToLoad.getName()); // Show just the file name
-                }
-            }
-        });
-
-        listProductButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                listProduct();
-            }
-        });
-
-        backToDashboardFromSell.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(mainPanel, "Dashboard");
-                promptForAppReview(); // Prompt for review after selling
-            }
-        });
-    }
-
-    private void createBuyProductPanel() {
-        buyProductPanel = new JPanel(new BorderLayout(10, 10));
+        // Buy Product Panel
+        JPanel buyProductPanel = new JPanel(new BorderLayout(10, 10));
         buyProductPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        // Top Panel for Filters
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        filterPanel.setBorder(BorderFactory.createTitledBorder("Filter Products"));
-
-        priceFilterMinField = new JTextField(5);
-        priceFilterMaxField = new JTextField(5);
-        // Ensure the types here match the types assigned in initializeDummyData()
-        productTypeFilterComboBox = new JComboBox<>(new String[]{"All", "Electronics", "Books", "Furniture", "Vehicles", "Miscellaneous"}); // Example types
-
-        JButton applyFilterButton = new JButton("Apply Filter");
-        JButton resetFilterButton = new JButton("Reset Filter");
-
-        filterPanel.add(new JLabel("Price Min:"));
-        filterPanel.add(priceFilterMinField);
-        filterPanel.add(new JLabel("Max:"));
-        filterPanel.add(priceFilterMaxField);
-        filterPanel.add(new JLabel("Type:"));
-        filterPanel.add(productTypeFilterComboBox);
-        filterPanel.add(applyFilterButton);
-        filterPanel.add(resetFilterButton);
-
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        filterPanel.add(new JLabel("Min:")); filterPanel.add(priceFilterMinField = new JTextField(5));
+        filterPanel.add(new JLabel("Max:")); filterPanel.add(priceFilterMaxField = new JTextField(5));
+        filterPanel.add(new JLabel("Type:")); filterPanel.add(productTypeFilterComboBox = new JComboBox<>(new String[]{"All", "Electronics", "Books", "Furniture", "Vehicles", "Miscellaneous"}));
+        JButton applyFilterBtn = new JButton("Apply"); applyFilterBtn.addActionListener(e -> applyProductFilters()); filterPanel.add(applyFilterBtn);
+        JButton resetFilterBtn = new JButton("Reset"); resetFilterBtn.addActionListener(e -> resetProductFilters()); filterPanel.add(resetFilterBtn);
         buyProductPanel.add(filterPanel, BorderLayout.NORTH);
+        JList<Product> productJList = new JList<>(productListModel = new DefaultListModel<>());
+        productJList.setCellRenderer(new ProductListCellRenderer());
+        buyProductPanel.add(new JScrollPane(productJList), BorderLayout.CENTER);
+        JPanel buyActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        JButton viewDetailsBtn = new JButton("Details"); viewDetailsBtn.addActionListener(e -> { Product p = productJList.getSelectedValue(); if(p!=null) showProductDetails(p); else JOptionPane.showMessageDialog(this, "Select a product."); }); buyActions.add(viewDetailsBtn);
+        JButton addToCartBtn = new JButton("Add to Cart"); addToCartBtn.addActionListener(e -> { Product p = productJList.getSelectedValue(); if(p!=null) addToCart(p); else JOptionPane.showMessageDialog(this, "Select a product."); }); buyActions.add(addToCartBtn);
+        JButton viewCartBtn = new JButton("View Cart"); viewCartBtn.addActionListener(e -> { refreshCartList(); cardLayout.show(mainPanel, "Cart"); }); buyActions.add(viewCartBtn);
+        JButton backToDashBuy = new JButton("Back"); backToDashBuy.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard")); buyActions.add(backToDashBuy);
+        buyProductPanel.add(buyActions, BorderLayout.SOUTH);
+        mainPanel.add(buyProductPanel, "BuyProduct");
 
-        // Center Panel for Product List
-        productListModel = new DefaultListModel<>();
-        productJList = new JList<>(productListModel);
-        productJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        productJList.setCellRenderer(new ProductListCellRenderer()); // Custom renderer for better display
-        JScrollPane productScrollPane = new JScrollPane(productJList);
-        buyProductPanel.add(productScrollPane, BorderLayout.CENTER);
-
-        // Bottom Panel for Actions
-        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        JButton viewDetailsButton = new JButton("View Details");
-        JButton addToCartButton = new JButton("Add to Cart");
-        JButton viewCartButton = new JButton("View Cart");
-        JButton backToDashboardFromBuy = new JButton("Back to Dashboard");
-
-        actionPanel.add(viewDetailsButton);
-        actionPanel.add(addToCartButton);
-        actionPanel.add(viewCartButton);
-        actionPanel.add(backToDashboardFromBuy);
-        buyProductPanel.add(actionPanel, BorderLayout.SOUTH);
-
-        // Action Listeners
-        applyFilterButton.addActionListener(e -> applyProductFilters());
-        resetFilterButton.addActionListener(e -> resetProductFilters());
-
-        viewDetailsButton.addActionListener(e -> {
-            Product selectedProduct = productJList.getSelectedValue();
-            if (selectedProduct != null) {
-                showProductDetails(selectedProduct);
-            } else {
-                JOptionPane.showMessageDialog(buyProductPanel, "Please select a product to view details.");
-            }
-        });
-
-        addToCartButton.addActionListener(e -> {
-            Product selectedProduct = productJList.getSelectedValue();
-            if (selectedProduct != null) {
-                addToCart(selectedProduct);
-            } else {
-                JOptionPane.showMessageDialog(buyProductPanel, "Please select a product to add to cart.");
-            }
-        });
-
-        viewCartButton.addActionListener(e -> {
-            refreshCartList();
-            cardLayout.show(mainPanel, "Cart");
-        });
-
-        backToDashboardFromBuy.addActionListener(e -> {
-            cardLayout.show(mainPanel, "Dashboard");
-        });
-
-        refreshBuyProductList(); // Initial load of products
-    }
-
-    private void createCartPanel() {
-        cartPanel = new JPanel(new BorderLayout(10, 10));
+        // Cart Panel
+        JPanel cartPanel = new JPanel(new BorderLayout(10, 10));
         cartPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        JLabel titleLabel = new JLabel("Your Shopping Cart", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        cartPanel.add(titleLabel, BorderLayout.NORTH);
-
-        cartListModel = new DefaultListModel<>();
-        cartJList = new JList<>(cartListModel);
-        cartJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane cartScrollPane = new JScrollPane(cartJList);
-        cartPanel.add(cartScrollPane, BorderLayout.CENTER);
-
-        JPanel summaryPanel = new JPanel(new BorderLayout());
-        cartTotalPriceLabel = new JLabel("Total: Rs. 0.00", SwingConstants.RIGHT);
-        cartTotalPriceLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        summaryPanel.add(cartTotalPriceLabel, BorderLayout.NORTH);
-
-        JPanel cartActionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        JButton removeItemButton = new JButton("Remove Item");
-        JButton proceedToCheckoutButton = new JButton("Proceed to Checkout");
-        JButton continueShoppingButton = new JButton("Continue Shopping");
-
-        cartActionPanel.add(removeItemButton);
-        cartActionPanel.add(proceedToCheckoutButton);
-        cartActionPanel.add(continueShoppingButton);
-        summaryPanel.add(cartActionPanel, BorderLayout.SOUTH);
-        cartPanel.add(summaryPanel, BorderLayout.SOUTH);
-
-        // Action Listeners
-        removeItemButton.addActionListener(e -> {
-            Product selectedProduct = cartJList.getSelectedValue();
-            if (selectedProduct != null) {
-                cartItems.remove(selectedProduct);
-                refreshCartList();
-            } else {
-                JOptionPane.showMessageDialog(cartPanel, "Please select an item to remove.");
-            }
-        });
-
-        proceedToCheckoutButton.addActionListener(e -> simulateCheckout());
-
-        continueShoppingButton.addActionListener(e -> cardLayout.show(mainPanel, "BuyProduct"));
+        cartPanel.add(new JLabel("Your Cart", SwingConstants.CENTER), BorderLayout.NORTH);
+        JList<Product> cartJList = new JList<>(cartListModel = new DefaultListModel<>());
+        cartPanel.add(new JScrollPane(cartJList), BorderLayout.CENTER);
+        JPanel cartSummaryActions = new JPanel(new BorderLayout());
+        cartTotalPriceLabel = new JLabel("Total: Rs. 0.00", SwingConstants.RIGHT); cartSummaryActions.add(cartTotalPriceLabel, BorderLayout.NORTH);
+        JPanel cartBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        JButton removeItemBtn = new JButton("Remove"); removeItemBtn.addActionListener(e -> { Product p = cartJList.getSelectedValue(); if(p!=null) { cartItems.remove(p); refreshCartList(); } else JOptionPane.showMessageDialog(this, "Select item to remove."); }); cartBtns.add(removeItemBtn);
+        JButton checkoutBtn = new JButton("Checkout"); checkoutBtn.addActionListener(e -> simulateCheckout()); cartBtns.add(checkoutBtn);
+        JButton continueShoppingBtn = new JButton("Shop More"); continueShoppingBtn.addActionListener(e -> cardLayout.show(mainPanel, "BuyProduct")); cartBtns.add(continueShoppingBtn);
+        cartSummaryActions.add(cartBtns, BorderLayout.SOUTH);
+        cartPanel.add(cartSummaryActions, BorderLayout.SOUTH);
+        mainPanel.add(cartPanel, "Cart");
     }
 
-    // --- Core Logic Methods ---
-
+    // Core Logic Methods (simplified messages for brevity)
     private void attemptLogin() {
-        String username = loginUsernameField.getText();
-        String password = new String(loginPasswordField.getPassword());
-
-        boolean loggedIn = false;
-        for (User user : registeredUsers) {
-            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
-                currentUser = user;
-                loggedIn = true;
-                break;
-            }
-        }
-
+        String u = loginUsernameField.getText(), p = new String(loginPasswordField.getPassword());
+        boolean loggedIn = registeredUsers.stream().anyMatch(user -> user.getUsername().equals(u) && user.getPassword().equals(p));
         if (loggedIn) {
-            JOptionPane.showMessageDialog(this, "Login Successful! Welcome, " + currentUser.getUsername() + ".");
-            // Update dashboard welcome message
-            Component[] components = dashboardPanel.getComponents();
-            for (Component comp : components) {
-                if (comp instanceof JLabel) {
-                    JLabel label = (JLabel) comp;
-                    if (label.getText().startsWith("Hello,")) {
-                        label.setText("Hello, " + currentUser.getUsername() + "!");
-                        break;
-                    }
-                }
-            }
-            cardLayout.show(mainPanel, "Dashboard");
-            clearLoginFields();
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid Username or Password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
-        }
+            currentUser = registeredUsers.stream().filter(user -> user.getUsername().equals(u)).findFirst().orElse(null);
+            JOptionPane.showMessageDialog(this, "Welcome, " + currentUser.getUsername() + "!");
+            SwingUtilities.invokeLater(() -> welcomeLabelDashboard.setText("Hello, " + currentUser.getUsername() + "!"));
+            cardLayout.show(mainPanel, "Dashboard"); clearLoginFields();
+        } else { JOptionPane.showMessageDialog(this, "Invalid login.", "Login Failed", JOptionPane.ERROR_MESSAGE); }
     }
 
     private void attemptSignup() {
-        String username = signupUsernameField.getText();
-        String password = new String(signupPasswordField.getPassword());
-        String address = signupAddressField.getText();
-        String phoneNumber = signupPhoneNumberField.getText(); // Get phone number
-        String email = signupEmailField.getText();             // Get email
-
-        if (username.isEmpty() || password.isEmpty() || address.isEmpty() || phoneNumber.isEmpty() || email.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "All fields are required for signup.", "Signup Failed", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Validate Phone Number
-        if (!phoneNumber.matches("\\d{10}")) { // Checks for exactly 10 digits
-            JOptionPane.showMessageDialog(this, "Phone number must be exactly 10 digits and contain only numbers.", "Signup Failed", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Validate Email
-        if (!email.endsWith("@gmail.com")) {
-            JOptionPane.showMessageDialog(this, "Email must end with @gmail.com.", "Signup Failed", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Check if username already exists
-        for (User user : registeredUsers) {
-            if (user.getUsername().equals(username)) {
-                JOptionPane.showMessageDialog(this, "Username already exists. Please choose a different one.", "Signup Failed", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-        }
-
-        User newUser = new User(username, password, address, phoneNumber, email); // Pass new fields to User constructor
-        registeredUsers.add(newUser);
-        JOptionPane.showMessageDialog(this, "Account created successfully for " + username + "! You can now login.");
-        cardLayout.show(mainPanel, "Login");
-        clearSignupFields();
+        String u = signupUsernameField.getText(), p = new String(signupPasswordField.getPassword()), a = signupAddressField.getText(), ph = signupPhoneNumberField.getText(), e = signupEmailField.getText();
+        if (u.isEmpty() || p.isEmpty() || a.isEmpty() || ph.isEmpty() || e.isEmpty()) { JOptionPane.showMessageDialog(this, "All fields required.", "Signup Failed", JOptionPane.ERROR_MESSAGE); return; }
+        if (!ph.matches("\\d{10}")) { JOptionPane.showMessageDialog(this, "Phone must be 10 digits.", "Signup Failed", JOptionPane.ERROR_MESSAGE); return; }
+        if (!e.endsWith("@gmail.com")) { JOptionPane.showMessageDialog(this, "Email must be @gmail.com.", "Signup Failed", JOptionPane.ERROR_MESSAGE); return; }
+        if (registeredUsers.stream().anyMatch(user -> user.getUsername().equals(u))) { JOptionPane.showMessageDialog(this, "User exists.", "Signup Failed", JOptionPane.ERROR_MESSAGE); return; }
+        registeredUsers.add(new User(u, p, a, ph, e));
+        JOptionPane.showMessageDialog(this, "Account created! Login now."); cardLayout.show(mainPanel, "Login"); clearSignupFields();
     }
 
     private void listProduct() {
-        if (currentUser == null) {
-            JOptionPane.showMessageDialog(sellProductPanel, "You must be logged in to sell a product.");
-            return;
-        }
-
-        String name = productNameField.getText();
-        String description = productDescriptionArea.getText();
-        String priceText = productPriceField.getText();
-
-        if (name.isEmpty() || description.isEmpty() || priceText.isEmpty()) {
-            JOptionPane.showMessageDialog(sellProductPanel, "Please fill in all product details.", "Missing Information", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        double price;
-        try {
-            price = Double.parseDouble(priceText);
-            if (price <= 0) {
-                throw new NumberFormatException();
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(sellProductPanel, "Please enter a valid positive number for price.", "Invalid Price", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        String productId = UUID.randomUUID().toString();
-        // When selling, assign a generic "Miscellaneous" type for simplicity in this demo.
-        // In a real application, you'd add a JComboBox or similar for the seller to choose the product type.
-        Product newProduct = new Product(productId, name, description, price, currentUser.getUsername(), selectedImagePath, "Miscellaneous");
-        availableProducts.add(newProduct);
-
-        JOptionPane.showMessageDialog(sellProductPanel, "Product '" + name + "' listed successfully!");
-        clearSellProductForm();
-        promptForAppReview(); // Ask for review after selling
-        // Optionally, go back to dashboard or stay on sell page
-        cardLayout.show(mainPanel, "Dashboard");
+        if (currentUser == null) { JOptionPane.showMessageDialog(this, "Login to sell."); return; }
+        String n = productNameField.getText(), d = productDescriptionArea.getText(), pT = productPriceField.getText();
+        if (n.isEmpty() || d.isEmpty() || pT.isEmpty()) { JOptionPane.showMessageDialog(this, "Fill product details.", "Missing Info", JOptionPane.WARNING_MESSAGE); return; }
+        double price; try { price = Double.parseDouble(pT); if (price <= 0) throw new NumberFormatException(); }
+        catch (NumberFormatException ex) { JOptionPane.showMessageDialog(this, "Valid price needed.", "Invalid Price", JOptionPane.ERROR_MESSAGE); return; }
+        availableProducts.add(new Product(UUID.randomUUID().toString(), n, d, price, currentUser.getUsername(), "Miscellaneous"));
+        JOptionPane.showMessageDialog(this, "'" + n + "' listed!"); clearSellProductForm(); promptForAppReview(); cardLayout.show(mainPanel, "Dashboard");
     }
 
     private void refreshBuyProductList() {
         productListModel.clear();
-        for (Product product : availableProducts) {
-            // Do not show products listed by the current user
-            if (currentUser == null || !product.getSellerUsername().equals(currentUser.getUsername())) {
-                productListModel.addElement(product);
-            }
-        }
+        availableProducts.stream()
+            .forEach(productListModel::addElement);
     }
 
     private void applyProductFilters() {
-        productListModel.clear(); // Clear existing items
-
+        productListModel.clear();
         double minPrice = -1;
         double maxPrice = Double.MAX_VALUE;
-
-        // Error handling for price input fields
         try {
-            if (!priceFilterMinField.getText().isEmpty()) {
-                minPrice = Double.parseDouble(priceFilterMinField.getText());
-            }
-            if (!priceFilterMaxField.getText().isEmpty()) {
-                maxPrice = Double.parseDouble(priceFilterMaxField.getText());
-            }
-            if (minPrice > maxPrice) {
-                 JOptionPane.showMessageDialog(buyProductPanel, "Minimum price cannot be greater than maximum price.", "Filter Error", JOptionPane.ERROR_MESSAGE);
-                 return; // Stop filtering if invalid range
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(buyProductPanel, "Invalid price input. Please enter numbers only for price filters.", "Filter Error", JOptionPane.ERROR_MESSAGE);
-            return; // Stop filtering if invalid input
-        }
+            if (!priceFilterMinField.getText().isEmpty()) minPrice = Double.parseDouble(priceFilterMinField.getText());
+            if (!priceFilterMaxField.getText().isEmpty()) maxPrice = Double.parseDouble(priceFilterMaxField.getText());
+            if (minPrice > maxPrice) { JOptionPane.showMessageDialog(this, "Min price > Max.", "Filter Error", JOptionPane.ERROR_MESSAGE); return; }
+        } catch (NumberFormatException e) { JOptionPane.showMessageDialog(this, "Invalid price input.", "Filter Error", JOptionPane.ERROR_MESSAGE); return; }
 
-        String selectedType = (String) productTypeFilterComboBox.getSelectedItem();
+        final double finalMinPrice = minPrice;
+        final double finalMaxPrice = maxPrice;
+        String selectedT = (String) productTypeFilterComboBox.getSelectedItem();
 
-        for (Product product : availableProducts) {
-            // Filter by seller (don't show own products)
-            if (currentUser != null && product.getSellerUsername().equals(currentUser.getUsername())) {
-                continue;
-            }
-
-            // Filter by price
-            if (product.getPrice() < minPrice || product.getPrice() > maxPrice) {
-                continue; // Skip this product if it's outside the price range
-            }
-
-            // Filter by type (now uses the explicit 'type' field)
-            if (!selectedType.equals("All")) {
-                if (!product.getType().equalsIgnoreCase(selectedType)) {
-                    continue; // Skip this product if its type doesn't match the filter
-                }
-            }
-            productListModel.addElement(product); // Add product if it passes all filters
-        }
-        if (productListModel.isEmpty() && !availableProducts.isEmpty()) {
-             JOptionPane.showMessageDialog(buyProductPanel, "No products found matching your filter criteria.", "No Results", JOptionPane.INFORMATION_MESSAGE);
-        } else if (availableProducts.isEmpty()) {
-             JOptionPane.showMessageDialog(buyProductPanel, "No products are currently available in the marketplace.", "No Products", JOptionPane.INFORMATION_MESSAGE);
-        }
+        availableProducts.stream()
+            .filter(product -> product.getPrice() >= finalMinPrice && product.getPrice() <= finalMaxPrice)
+            .filter(product -> selectedT.equals("All") || product.getType().equalsIgnoreCase(selectedT))
+            .forEach(productListModel::addElement);
+        if (productListModel.isEmpty()) JOptionPane.showMessageDialog(this, "No products match filters.", "No Results", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void resetProductFilters() {
-        priceFilterMinField.setText("");
-        priceFilterMaxField.setText("");
-        productTypeFilterComboBox.setSelectedItem("All");
-        refreshBuyProductList(); // Reload all eligible products
+        priceFilterMinField.setText(""); priceFilterMaxField.setText(""); productTypeFilterComboBox.setSelectedItem("All");
+        refreshBuyProductList();
     }
 
-    private void showProductDetails(Product product) {
-        String details = "Product Name: " + product.getName() + "\n" +
-                         "Description: " + product.getDescription() + "\n" +
-                         "Price: Rs." + String.format("%.2f", product.getPrice()) + "\n" +
-                         "Seller: " + product.getSellerUsername() + "\n" +
-                         "Category: " + product.getType() + "\n" + // Display product type
-                         "Image Path: " + (product.getImagePath().isEmpty() ? "N/A" : product.getImagePath().substring(product.getImagePath().lastIndexOf(File.separator) + 1)); // Just filename
-
-        JOptionPane.showMessageDialog(buyProductPanel, details, "Product Details", JOptionPane.INFORMATION_MESSAGE);
-
-        // Simulate negotiation (optional)
-        int negotiateOption = JOptionPane.showConfirmDialog(buyProductPanel, "Would you like to negotiate the price for " + product.getName() + "?", "Negotiate?", JOptionPane.YES_NO_OPTION);
-        if (negotiateOption == JOptionPane.YES_OPTION) {
-            simulateNegotiation(product);
-        }
+    private void showProductDetails(Product p) {
+        JOptionPane.showMessageDialog(this, String.format("Name: %s\nDesc: %s\nPrice: Rs.%.2f\nSeller: %s\nCategory: %s", p.getName(), p.description, p.getPrice(), p.getSellerUsername(), p.getType()), "Details", JOptionPane.INFORMATION_MESSAGE);
+        int negotiateOpt = JOptionPane.showConfirmDialog(this, "Negotiate for " + p.getName() + "?", "Negotiate?", JOptionPane.YES_NO_OPTION);
+        if (negotiateOpt == JOptionPane.YES_OPTION) simulateNegotiation(p);
     }
 
-    private void addToCart(Product product) {
-        if (currentUser == null) {
-            JOptionPane.showMessageDialog(buyProductPanel, "Please login to add items to cart.", "Login Required", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        if (cartItems.contains(product)) {
-            JOptionPane.showMessageDialog(buyProductPanel, product.getName() + " is already in your cart.");
-            return;
-        }
-        cartItems.add(product);
-        JOptionPane.showMessageDialog(buyProductPanel, product.getName() + " added to cart!");
-        refreshCartList(); // Update cart total
+    private void addToCart(Product p) {
+        if (currentUser == null) { JOptionPane.showMessageDialog(this, "Login to add to cart."); return; }
+        if (cartItems.contains(p)) { JOptionPane.showMessageDialog(this, p.getName() + " already in cart."); return; }
+        cartItems.add(p); JOptionPane.showMessageDialog(this, p.getName() + " added!"); refreshCartList();
     }
 
     private void refreshCartList() {
         cartListModel.clear();
-        double total = 0.0;
-        for (Product item : cartItems) {
-            cartListModel.addElement(item);
-            total += item.getPrice();
-        }
+        double total = cartItems.stream().mapToDouble(Product::getPrice).sum();
+        cartItems.forEach(cartListModel::addElement);
         cartTotalPriceLabel.setText("Total: Rs." + String.format("%.2f", total));
     }
 
     private void simulateCheckout() {
-        if (cartItems.isEmpty()) {
-            JOptionPane.showMessageDialog(cartPanel, "Your cart is empty. Please add items before checking out.", "Empty Cart", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Simulate notification to seller (would be real in a full app)
-        StringBuilder sellerNotification = new StringBuilder("Items sold:\n");
-        Map<String, List<Product>> salesBySeller = new HashMap<>();
-
-        for (Product item : cartItems) {
-            sellerNotification.append("- ").append(item.getName()).append(" (Seller: ").append(item.getSellerUsername()).append(")\n");
-            salesBySeller.computeIfAbsent(item.getSellerUsername(), k -> new ArrayList<>()).add(item);
-        }
-
-        JOptionPane.showMessageDialog(cartPanel, "Proceeding to Payment & Transport for:\n" + sellerNotification.toString(), "Checkout Confirmation", JOptionPane.INFORMATION_MESSAGE);
-
-        // Simulate payment/transport
-        int paymentConfirm = JOptionPane.showConfirmDialog(cartPanel, "Payment and transport arranged for cart items. Confirm purchase?", "Confirm Purchase", JOptionPane.YES_NO_OPTION);
-
-        if (paymentConfirm == JOptionPane.YES_OPTION) {
-            // Remove sold items from available products
-            availableProducts.removeAll(cartItems);
-            cartItems.clear(); // Clear cart after successful checkout
-            refreshCartList(); // Update cart display
-
-            JOptionPane.showMessageDialog(cartPanel, "Purchase successful! Items will be delivered to " + currentUser.getAddress() + ".");
-
-            // Prompt for reviews
-            promptForAppReview();
-            for (String seller : salesBySeller.keySet()) {
-                promptForSellerReview(seller);
-            }
-
-            int continueShopping = JOptionPane.showConfirmDialog(cartPanel, "Would you like to buy anything else?", "Continue Shopping?", JOptionPane.YES_NO_OPTION);
-            if (continueShopping == JOptionPane.YES_OPTION) {
-                cardLayout.show(mainPanel, "BuyProduct");
-                refreshBuyProductList(); // Refresh list after some items are "sold"
-            } else {
-                cardLayout.show(mainPanel, "Dashboard");
-            }
-        } else {
-            JOptionPane.showMessageDialog(cartPanel, "Checkout cancelled.");
-        }
+        if (cartItems.isEmpty()) { JOptionPane.showMessageDialog(this, "Cart is empty."); return; }
+        JOptionPane.showMessageDialog(this, "Proceeding to checkout.", "Checkout", JOptionPane.INFORMATION_MESSAGE);
+        int confirm = JOptionPane.showConfirmDialog(this, "Confirm purchase?", "Confirm", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            availableProducts.removeAll(cartItems); cartItems.clear(); refreshCartList();
+            JOptionPane.showMessageDialog(this, "Purchase successful! Delivered to " + currentUser.getAddress() + ".");
+            promptForAppReview(); // Pass in cartItems so it knows which sellers were involved
+            cartItems.stream().map(Product::getSellerUsername).distinct().forEach(this::promptForSellerReview);
+            if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this, "Buy anything else?", "Continue?", JOptionPane.YES_NO_OPTION)) {
+                cardLayout.show(mainPanel, "BuyProduct"); refreshBuyProductList();
+            } else { cardLayout.show(mainPanel, "Dashboard"); }
+        } else { JOptionPane.showMessageDialog(this, "Checkout cancelled."); }
     }
 
-    private void simulateNegotiation(Product product) {
-        String offer = JOptionPane.showInputDialog(buyProductPanel, "Enter your offer price for " + product.getName() + " (current: Rs." + String.format("%.2f", product.getPrice()) + "):");
+    private void simulateNegotiation(Product p) {
+        String offer = JOptionPane.showInputDialog(this, "Offer for " + p.getName() + " (current: Rs." + String.format("%.2f", p.getPrice()) + "):");
         if (offer != null && !offer.trim().isEmpty()) {
-            try {
-                double offeredPrice = Double.parseDouble(offer);
-                if (offeredPrice <= 0) {
-                    JOptionPane.showMessageDialog(buyProductPanel, "Offer price must be a positive number.", "Negotiation Failed", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-                // Simulate seller notification and response
-                JOptionPane.showMessageDialog(buyProductPanel,
-                        "Your offer of Rs." + String.format("%.2f", offeredPrice) + " for " + product.getName() + " has been sent to " + product.getSellerUsername() + ".\n" +
-                        "Simulating negotiation: Seller accepts your offer for this demo!",
-                        "Negotiation Sent", JOptionPane.INFORMATION_MESSAGE);
-
-                // In a real app, this would involve server-side communication and seller approval.
-                // For this demo, we'll assume negotiation is successful and update price in cart logic later.
-                // For simplicity, we won't actually change the listed product price in `availableProducts`.
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(buyProductPanel, "Invalid offer price. Please enter a valid number.", "Negotiation Failed", JOptionPane.ERROR_MESSAGE);
-            }
+            try { double offeredP = Double.parseDouble(offer); if (offeredP <= 0) throw new NumberFormatException();
+                JOptionPane.showMessageDialog(this, "Offer sent! Seller accepts for demo.", "Negotiation Sent", JOptionPane.INFORMATION_MESSAGE);
+            } catch (NumberFormatException e) { JOptionPane.showMessageDialog(this, "Invalid offer.", "Negotiation Failed", JOptionPane.ERROR_MESSAGE); }
         }
     }
 
     private void promptForAppReview() {
-        int reviewOption = JOptionPane.showConfirmDialog(mainPanel, "Would you like to give a review for the app?", "App Review", JOptionPane.YES_NO_OPTION);
-        if (reviewOption == JOptionPane.YES_OPTION) {
-            String review = JOptionPane.showInputDialog(mainPanel, "Please enter your app review (e.g., '5 stars, great app!'):");
+        if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this, "Review app?", "App Review", JOptionPane.YES_NO_OPTION)) {
+            String review = JOptionPane.showInputDialog(this, "Enter app review:");
             if (review != null && !review.trim().isEmpty()) {
-                JOptionPane.showMessageDialog(mainPanel, "Thank you for your app review!");
-                // In a real app, save this review to database
-            } else {
-                JOptionPane.showMessageDialog(mainPanel, "App review cancelled or empty.");
-            }
+                JOptionPane.showMessageDialog(this, "Thanks for review!");
+            } else { JOptionPane.showMessageDialog(this, "Review empty or cancelled."); }
         }
     }
 
-    private void promptForSellerReview(String sellerUsername) {
-        int reviewOption = JOptionPane.showConfirmDialog(mainPanel, "Would you like to give a review for seller " + sellerUsername + "?", "Seller Review", JOptionPane.YES_NO_OPTION);
-        if (reviewOption == JOptionPane.YES_OPTION) {
-            String review = JOptionPane.showInputDialog(mainPanel, "Please enter your review for " + sellerUsername + " (e.g., '4 stars, good communication'):");
+    private void promptForSellerReview(String seller) {
+        if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this, "Review " + seller + "?", "Seller Review", JOptionPane.YES_NO_OPTION)) {
+            String review = JOptionPane.showInputDialog(this, "Enter review for " + seller + ":");
             if (review != null && !review.trim().isEmpty()) {
-                JOptionPane.showMessageDialog(mainPanel, "Thank you for your review for " + sellerUsername + "!");
-                // In a real app, save this review to database
-            } else {
-                JOptionPane.showMessageDialog(mainPanel, "Seller review cancelled or empty.");
-            }
+                JOptionPane.showMessageDialog(this, "Thanks for review!");
+            } else { JOptionPane.showMessageDialog(this, "Review empty or cancelled."); }
         }
     }
 
-    // --- Helper Methods ---
+    // Helper Methods (clearing fields)
+    private void clearLoginFields() { loginUsernameField.setText(""); loginPasswordField.setText(""); }
+    private void clearSignupFields() { signupUsernameField.setText(""); signupPasswordField.setText(""); signupAddressField.setText(""); signupPhoneNumberField.setText(""); signupEmailField.setText(""); }
+    private void clearSellProductForm() { productNameField.setText(""); productDescriptionArea.setText(""); productPriceField.setText(""); }
 
-    private void clearLoginFields() {
-        loginUsernameField.setText("");
-        loginPasswordField.setText("");
-    }
-
-    private void clearSignupFields() {
-        signupUsernameField.setText("");
-        signupPasswordField.setText("");
-        signupAddressField.setText("");
-        signupPhoneNumberField.setText(""); // Clear new fields
-        signupEmailField.setText("");       // Clear new fields
-    }
-
-    private void clearSellProductForm() {
-        productNameField.setText("");
-        productDescriptionArea.setText("");
-        productPriceField.setText("");
-        productImageLabel.setText("No image selected");
-        selectedImagePath = "";
-    }
-
-    // Custom Cell Renderer for Product JList to display details better
+    // Custom Cell Renderer (simplified)
     private static class ProductListCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             if (value instanceof Product) {
                 Product product = (Product) value;
-                label.setText("<html><b>" + product.getName() + "</b> (Rs." + String.format("%.2f", product.getPrice()) + ")<br>" +
-                              "<small>Category: " + product.getType() + " | Seller: " + product.getSellerUsername() + "</small><br>" + // Display type
-                              "<small>" + product.getDescription() + "</small></html>");
-                label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // Add some padding
+                label.setText("<html><b>" + product.getName() + "</b> (Rs." + String.format("%.2f", product.getPrice()) + ")<br><small>Cat: " + product.getType() + " | Seller: " + product.getSellerUsername() + "</small></html>");
+                label.setBorder(new EmptyBorder(5, 10, 5, 10));
             }
             return label;
         }
     }
 
-    // --- Main Method ---
     public static void main(String[] args) {
-        // Ensure GUI updates are done on the Event Dispatch Thread (EDT)
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new Marketappwithgui();
-            }
-        });
+        SwingUtilities.invokeLater(MarketplaceApp::new);
     }
 }
